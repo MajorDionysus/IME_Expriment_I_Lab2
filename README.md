@@ -1,13 +1,13 @@
 # SUSTech BME IME_Expriment_I_Lab2
 
-## Overview
-This repository serves as a course project platform for code submission. It encompasses a Python web interface developed using the Django framework within the `ECG_APP` folder.
+## Overview and Announcement
+This repository serves as a course project platform for code submission. 
 
 ## Features
 
 ### ECG_APP Folder
-- **Python Web Interface**: A Django-based architecture for user interaction.
-- **Matlab Integration**: An independent Matlab file that interfaces with the NI acquisition card and AD8232 development board GUI, facilitating automatic data saving to the root directory with filenames timestamped.
+- **Python Web Interface**: A Django-based architecture for user interaction in ECG_APP folder.
+- **Matlab Integration**: An independent Matlab file `ECG_exported.m ` that interfaces with the NI acquisition card and AD8232 development board GUI, facilitating automatic data saving to the root directory with filenames timestamped.
 
 ## Data Structure
 
@@ -22,7 +22,7 @@ To get started with this project, follow these steps:
 Ensure you have Python and MATLAB installed on your system. Install the required Python packages using pip.
 
 2. **Data Acquisition**  
-Use the MATLAB script `ECG_exported.m ` to connect to the NI acquisition card and start data collection.
+Use the MATLAB script `ECG_exported.m ` to connect to the NI acquisition card and AD8232 to start data collection. Save the `.mat` file.
 
 3. **Run the Web Interface**  
 Navigate to the `ECG_APP` directory and start the Django server. Upload the `.mat` file saved before.
