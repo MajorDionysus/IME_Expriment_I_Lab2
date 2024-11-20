@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Health Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+      body {
+        background-color: #121212;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        margin-top: 80px;
+        font-size: 2.5em;
+        text-align: center;
+      }
+      h2 {
+        margin: 40px 0;
+        font-size: 1.8em;
+        text-align: center;
+      }
+      .container {
+        display: flex;
+        width: 80%;
+        margin: 20px 0;
+      }
+      .chart-container {
+        flex: 7;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .data-container {
+        flex: 3;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin-left: 20px;
+      }
+      strong {
+        color: #ffffff;
+      }
+      .energy-chart-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        width: 80%;
+      }
+      .energy-chart {
+        flex: 1;
+        margin: 0 10px;
+      }
+      .metrics-list {
+        list-style-type: none;
+        padding: 0;
+      }
+      .metrics-list li {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px; /* 增加行间距 */
+      }
+      canvas {
+        width: 100%;
+        height: 200px;
+      }
+      button {
+        margin: 20px;
+        padding: 10px 20px;
+        font-size: 1.2em;
+        background-color: rgba(75, 192, 192, 1);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Health Report</h1>
+    <button id="exportButton">Export</button>
+
+    <div id="reportContent" class="container">
+      <div class="chart-container">
+        <canvas id="signalChart" width="400" height="200"></canvas>
+      </div>
+      <div class="data-container">
+        <h2>Metrics:</h2>
+        <ul class="metrics-list">
+          {% for key, value in report_data.metrics_list.items %}
+          <li><strong>{{ key }}</strong> {{ value|floatformat:2 }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="energy-chart-container">
+      <div class="energy-chart">
+        <canvas id="signalCycleChart" width="400" height="200"></canvas>
+      </div>
+      <div class="energy-chart">
+        <canvas id="energyChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <script>
+                                // 获取从后端传来的数据
+                                const fs = {{ report_data.fs}};
+                                const denoisedSignal = {{ report_data.denoised_signal|safe }};
+                                // 计算周期范围（假设一个周期长度为 256）
+                                const cycleLength = 256; // 替换为实际的周期长度
+                                const startCycleIndex = cycleLength; // 开始索引
+                                const endCycleIndex = cycleLength * 3; // 结束索引，展示1-3个周期
+
+                                // 截取信号的1-3个周期
+                                const signalCycle = denoisedSignal.slice(startCycleIndex, endCycleIndex);
+
+                                // 创建信号图表
+                                const ctxSignal = document.getElementById('signalChart').getContext('2d');
+                                const signalChart = new Chart(ctxSignal, {
+                                    type: 'line',
+                                    data: {
+                                        labels: Array.from({ length: denoisedSignal.length }, (_, i) => i/fs),
+                                        datasets: [{
+                                            label: 'Denoised Signal',
+                                            data: denoisedSignal,
+                                            borderColor: 'rgba(250, 128, 114, 1)',
+                                            backgroundColor: 'rgba(250, 128, 114, 1)',
+                                            borderWidth: 2,
+                                            fill: false,
+                                            pointRadius: 0 // 去掉数据点的圆圈标记
+                                        }]
+                                    },
+                                    options: {
+                                        scales: {
+                                            x: {
+                                                type: 'linear',
+                                                position: 'bottom'
+                                            },
+                                            y: {
+                                                beginAtZero: true
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // 创建能量图
+                                const energyCtx = document.getElementById('energyChart').getContext('2d');
+                                const individualScores = {{ report_data.individual_scores|safe }};
+                                const labels = Object.keys(individualScores);
+                                const scores = Object.values(individualScores);
+
+                                const energyChart = new Chart(energyCtx, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Individual Scores',
+                                            data: scores,
+                                            backgroundColor: 'rgba(152, 251, 152, 0.5)',
+                                            borderColor: 'rgba(240, 255, 240, 0.5)',
+                                            borderWidth: 1,
+                                            barThickness: 10,
+                                            barPercentage: 0.2,
+                                            categoryPercentage: 0.2
+                                        }]
+                                    },
+                                    options: {
+                                        indexAxis: 'y',
+                                        scales: {
+                                            x: {
+                                                beginAtZero: true,
+                                                max: 100
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // 创建周期信号图
+                                const ctxSignalCycle = document.getElementById('signalCycleChart').getContext('2d');
+                                const signalCycleChart = new Chart(ctxSignalCycle, {
+                                    type: 'line',
+                                    data: {
+                                        labels: Array.from({ length: signalCycle.length }, (_, i) => i/fs),
+                                        datasets: [{
+                                            label: 'Signal Cycle (1-2 cycles)',
+                                            data: signalCycle,
+                                            borderColor: 'rgba(75, 192, 192, 1)',
+                                            backgroundColor: 'rgba(75, 192, 192, 1)',
+                                            borderWidth: 2,
+                                            fill: false,
+                                            pointRadius: 0 // 去掉数据点的圆圈标记
+                                        }]
+                                    },
+                                    options: {
+                                        scales: {
+                                            x: {
+                                                type: 'linear',
+                                                position: 'bottom'
+                                            },
+                                            y: {
+                                                beginAtZero: true
+                                            }
+                                        }
+                                    }
+                                });
+
+                               // 导出报告功能
+      document.getElementById('exportButton').addEventListener('click', () => {
+          html2canvas(document.getElementById('reportContent')).then(canvas => {
+              const { jsPDF } = window.jspdf;
+              const pdf = new jsPDF();
+              const imgData = canvas.toDataURL('image/png');
+
+              // 添加标题（居中）
+              pdf.setFontSize(20);
+              const title = 'Health Report';
+              const titleWidth = pdf.getTextWidth(title);
+              const xTitle = (pdf.internal.pageSize.getWidth() - titleWidth) / 2;
+              pdf.text(title, xTitle, 20);
+
+              // 添加主图像（居中）
+              const imgWidth = pdf.internal.pageSize.getWidth() - 20;
+              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              pdf.addImage(imgData, 'PNG', 40, 30, imgWidth, imgHeight);
+
+              // 添加周期ECG信号图
+              const ecgCanvas = document.getElementById('signalCycleChart'); // 获取ECG信号图的Canvas
+              const ecgImgData = ecgCanvas.toDataURL('image/png');
+              const ecgImgWidth = imgWidth; // 与主图像宽度相同
+              const ecgImgHeight = (ecgCanvas.height * ecgImgWidth) / ecgCanvas.width;
+              pdf.addImage(ecgImgData, 'PNG', 10, 30 + imgHeight + 10, ecgImgWidth, ecgImgHeight);
+
+              // 添加文本内容
+              let yOffset = 30 + imgHeight + ecgImgHeight + 20; // 调整图像下方的起始位置
+
+              // 添加 Metrics 和 Scores
+              pdf.text('Metrics:                                       Scores:', 20, yOffset);
+              pdf.setFontSize(12); // 调整正文字号
+              yOffset += 10;
+
+              const metrics = Object.entries({{ report_data.metrics_list|safe }});
+              const scores = Object.entries({{ report_data.individual_scores|safe }});
+
+              // 确保Metrics和Scores分两栏显示
+              const maxLength = Math.max(metrics.length, scores.length);
+              for (let i = 0; i < maxLength; i++) {
+                  if (i < metrics.length) {
+                      pdf.text(`${metrics[i][0].padEnd(20)} ${metrics[i][1].toFixed(2)}`, 20, yOffset);
+                  }
+                  if (i < scores.length) {
+                      pdf.text(`${scores[i][0].padEnd(20)} ${scores[i][1].toFixed(2)}`, 120, yOffset); // 第二栏起始X坐标
+                  }
+                  yOffset += 5; // 减小行间距
+              }
+
+              // 生成PDF
+              pdf.save('health_report.pdf');
+          });
+      });
+    </script>
+  </body>
+</html>
