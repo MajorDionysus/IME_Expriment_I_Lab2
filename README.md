@@ -4,10 +4,9 @@
 This repository serves as a course project platform for code submission. 
 
 ## Features
-
-### ECG_APP Folder
-- **Python Web Interface**: A Django-based architecture for user interaction in ECG_APP folder.
 - **Matlab Integration**: An independent Matlab file `ECG_exported.m ` that interfaces with the NI acquisition card and AD8232 development board GUI, facilitating automatic data saving to the root directory with filenames timestamped.
+### ECG_APP Folder
+- **Python Web Interface**: A Django-based architecture for user interaction.
 
 ## Data Structure
 
